@@ -1,14 +1,16 @@
+import 'dart:typed_data';
+
 import 'package:test/test.dart';
 import 'package:lzstring/lzstring.dart';
 
 void main() async {
   final String input = "測試,测试,テスト,testing";
   final String normal = await LZString.compress(input);
-  final String base64 = await LZString.compressToBase64(input);
+  final String? base64 = await LZString.compressToBase64(input);
   final String utf16 = await LZString.compressToUTF16(input);
   final String encodedUriComponent =
       await LZString.compressToEncodedURIComponent(input);
-  final List<int> uint8Array = await LZString.compressToUint8Array(input);
+  final Uint8List uint8Array = await LZString.compressToUint8Array(input);
 
   group('compress data', () {
     test('to normal', () {
@@ -82,12 +84,14 @@ void main() async {
     });
 
     test('from encoded uri component', () async {
-      expect(await LZString.decompressFromEncodedURIComponent(encodedUriComponent),
+      expect(
+          await LZString.decompressFromEncodedURIComponent(encodedUriComponent),
           equals(input));
     });
 
     test('from uint8 array', () async {
-      expect(await LZString.decompressFromUint8Array(uint8Array), equals(input));
+      expect(
+          await LZString.decompressFromUint8Array(uint8Array), equals(input));
     });
   });
 }
