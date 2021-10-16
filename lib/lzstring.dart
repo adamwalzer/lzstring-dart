@@ -29,13 +29,24 @@ class LZString {
     return _baseReverseDic[alphabet]![character]!;
   }
 
-  /// Produces ASCII UTF-16 strings representing the original string encoded in Base64 from [input].
-  /// Can be decompressed with `decompressFromBase64`.
+  /// Produces ASCII UTF-16 strings representing the original string encoded in
+  /// Base64 from [input].
+  /// Can be decompressed with [decompressFromBase64].
   ///
-  /// This works by using only 6bits of storage per character. The strings produced are therefore 166% bigger than those produced by `compress`.
-  static Future<String?> compressToBase64(String? input) async {
-    if (input == null) return "";
-    String res = await _compress(input, 6, (a) => _keyStrBase64[a]);
+  /// This works by using only 6bits of storage per character. The strings
+  /// produced are therefore 166% bigger than those produced by [compress].
+  static Future<String?> compressToBase64(String? input) async =>
+      compressToBase64Sync(input);
+
+  /// Synchronously produces ASCII UTF-16 strings representing the original
+  //// string encoded in Base64 from [input].
+  /// Can be decompressed with [decompressFromBase64].
+  ///
+  /// This works by using only 6bits of storage per character. The strings
+  /// produced are therefore 166% bigger than those produced by [compress].
+  static String? compressToBase64Sync(String? input) {
+    final res = _compress(input, 6, (a) => _keyStrBase64[a]);
+    if (res == null) return null;
     switch (res.length % 4) {
       case 0:
         return res;
@@ -50,200 +61,162 @@ class LZString {
   }
 
   /// Decompress base64 [input] which produces by `compressToBase64`.
-  static Future<String?> decompressFromBase64(String? input) async {
-    if (input == null) return "";
-    if (input == "") return null;
-    return await _decompress(input.length, 32,
+  static Future<String?> decompressFromBase64(String? input) async =>
+      decompressFromBase64Sync(input);
+
+  /// Synchronously decompress base64 [input] which produces by
+  /// [compressToBase64].
+  static String? decompressFromBase64Sync(String? input) {
+    if (input?.isEmpty ?? true) return null;
+    return _decompress(input!.length, 32,
         (index) => _getBaseValue(_keyStrBase64, input[index]));
   }
 
   /// Produces "valid" UTF-16 strings from [input].
   ///
+  /// Can be decompressed with [decompressFromUTF16].
+  ///
+  /// This works by using only 15 bits of storage per character. The strings
+  /// produced are therefore 6.66% bigger than those produced by [compress].
+  static Future<String?> compressToUTF16(String? input) async =>
+      compressToUTF16Sync(input);
+
+  /// Synchronously produces "valid" UTF-16 strings from [input].
+  ///
   /// Can be decompressed with `decompressFromUTF16`.
   ///
-  /// This works by using only 15 bits of storage per character. The strings produced are therefore 6.66% bigger than those produced by `compress`.
-  static Future<String> compressToUTF16(String? input) async {
-    if (input == null) return "";
-    return await _compress(input, 15, (a) => String.fromCharCode(a + 32)) + " ";
+  /// This works by using only 15 bits of storage per character. The strings
+  //// produced are therefore 6.66% bigger than those produced by [compress].
+  static String? compressToUTF16Sync(String? input) {
+    final compressed = _compress(input, 15, (a) => String.fromCharCode(a + 32));
+    if (compressed == null) return null;
+    return compressed + " ";
   }
 
-  /// Decompress "valid" UTF-16 string which produces by `compressToUTF16`
-  static Future<String?> decompressFromUTF16(String? compressed) async {
-    if (compressed == null) return "";
-    if (compressed == "") return null;
-    return await _decompress(
-        compressed.length, 16384, (index) => compressed.codeUnitAt(index) - 32);
+  /// Decompress "valid" UTF-16 string which produces by [compressToUTF16].
+  static Future<String?> decompressFromUTF16(String? compressed) async =>
+      decompressFromUTF16Sync(compressed);
+
+  /// Synchronously decompress "valid" UTF-16 string which produces by
+  /// [compressToUTF16]
+  static String? decompressFromUTF16Sync(String? compressed) {
+    if (compressed?.isEmpty ?? true) return null;
+    return _decompress(compressed!.length, 16384,
+        (index) => compressed.codeUnitAt(index) - 32);
   }
 
   /// Produces an uint8Array.
   ///
-  /// Can be decompressed with `decompressFromUint8Array`
-  static Future<Uint8List> compressToUint8Array(String uncompressed) async {
-    String compressed = await compress(uncompressed);
-    return Future<Uint8List>(() {
-      Uint8List buf = Uint8List(compressed.length * 2);
-      for (var i = 0, totalLen = compressed.length; i < totalLen; i++) {
-        int currentValue = compressed.codeUnitAt(i);
-        buf[i * 2] = currentValue >> 8;
-        buf[i * 2 + 1] = currentValue % 256;
-      }
-      return buf;
-    });
-  }
+  /// Can be decompressed with [decompressFromUint8Array].
+  static Future<Uint8List?> compressToUint8Array(String? uncompressed) async =>
+      compressToUint8ArraySync(uncompressed);
 
-  /// Decompress uint8Array which produces by `compressToUint8Array`.
-  static Future<String?> decompressFromUint8Array(Uint8List? compressed) async {
-    if (compressed == null) {
-      return "";
-    } else {
-      List<int> buf = List<int>.generate(compressed.length ~/ 2, (i) {
-        return compressed[i * 2] * 256 + compressed[i * 2 + 1];
-      });
-      List<String> result = <String>[];
-      buf.forEach((c) => result.add(String.fromCharCode(c)));
-      return await decompress(result.join(''));
+  /// Synchronously produces an uint8Array.
+  ///
+  /// Can be decompressed with [decompressFromUint8Array].
+  static Uint8List? compressToUint8ArraySync(String? uncompressed) {
+    final compressed = compressSync(uncompressed);
+    if (compressed == null) return null;
+    final buf = Uint8List(compressed.length * 2);
+    for (var i = 0, totalLen = compressed.length; i < totalLen; i++) {
+      final currentValue = compressed.codeUnitAt(i);
+      buf[i * 2] = currentValue >> 8;
+      buf[i * 2 + 1] = currentValue % 256;
     }
+    return buf;
   }
 
-  /// Decompress ASCII strings [input] which produces by `compressToEncodedURIComponent`.
+  /// Decompress uint8Array which produces by [compressToUint8Array].
+  static Future<String?> decompressFromUint8Array(
+          Uint8List? compressed) async =>
+      decompressFromUint8ArraySync(compressed);
+
+  /// Synchronously decompress uint8Array which produces by
+  /// [compressToUint8Array].
+  static String? decompressFromUint8ArraySync(Uint8List? compressed) {
+    if (compressed == null) return null;
+    final buf = List<int>.generate(compressed.length ~/ 2,
+        (i) => compressed[i * 2] * 256 + compressed[i * 2 + 1]);
+    final result = <String>[];
+    buf.forEach((c) => result.add(String.fromCharCode(c)));
+    return decompressSync(result.join(''));
+  }
+
+  /// Decompress ASCII strings [input] which produces by
+  /// [compressToEncodedURIComponent].
   static Future<String?> decompressFromEncodedURIComponent(
-      String? input) async {
-    if (input == null) return "";
-    if (input == "") return null;
-    input = input.replaceAll(' ', '+');
-    return await _decompress(input.length, 32,
+          String? input) async =>
+      decompressFromEncodedURIComponentSync(input);
+
+  /// Synchronously decompress ASCII strings [input] which produces by
+  /// [compressToEncodedURIComponent].
+  static String? decompressFromEncodedURIComponentSync(String? input) {
+    if (input?.isEmpty ?? true) return null;
+    input = input!.replaceAll(' ', '+');
+    return _decompress(input.length, 32,
         (index) => _getBaseValue(_keyStrUriSafe, input![index]));
   }
 
-  /// Produces ASCII strings representing the original string encoded in Base64 with a few tweaks to make these URI safe.
+  /// Produces ASCII strings representing the original string encoded in Base64
+  /// with a few tweaks to make these URI safe.
+  ///
+  /// Can be decompressed with [decompressFromEncodedURIComponent]
+  static Future<String?> compressToEncodedURIComponent(String? input) async =>
+      compressToEncodedURIComponentSync(input);
+
+  /// Synchronously produces ASCII strings representing the original string
+  /// encoded in Base64 with a few tweaks to make these URI safe.
   ///
   /// Can be decompressed with `decompressFromEncodedURIComponent`
-  static Future<String> compressToEncodedURIComponent(String? input) async {
-    if (input == null) "";
-    return await _compress(input, 6, (a) => _keyStrUriSafe[a]);
-  }
+  static String? compressToEncodedURIComponentSync(String? input) =>
+      _compress(input, 6, (a) => _keyStrUriSafe[a]);
 
   /// Produces invalid UTF-16 strings from [uncompressed].
   ///
   /// Can be decompressed with `decompress`.
   ///
-  static Future<String> compress(final String? uncompressed) async {
-    return await _compress(uncompressed, 16, (a) => String.fromCharCode(a));
-  }
+  static Future<String?> compress(final String? uncompressed) async =>
+      compressSync(uncompressed);
 
-  static Future<String> _compress(
-      String? uncompressed, int bitsPerChar, GetCharFromInt getCharFromInt) {
-    return Future<String>(() {
-      if (uncompressed == null) return "";
-      int? value;
-      Map<String, int> contextDictionary = Map<String, int>();
-      Map<String, bool> contextDictionaryToCreate = Map<String, bool>();
-      String contextC = "";
-      String contextWC = "";
-      String contextW = "";
-      int contextEnlargeIn =
-          2; // Compensate for the first entry which should not count
-      int contextDictSize = 3;
-      int contextNumBits = 2;
-      StringBuffer contextData = StringBuffer();
-      int contextDataVal = 0;
-      int contextDataPosition = 0;
-      int ii;
+  /// Synchronously produces invalid UTF-16 strings from [uncompressed].
+  ///
+  /// Can be decompressed with `decompress`.
+  ///
+  static String? compressSync(final String? uncompressed) =>
+      _compress(uncompressed, 16, (a) => String.fromCharCode(a));
 
-      for (ii = 0; ii < uncompressed.length; ii++) {
-        contextC = uncompressed[ii];
-        if (!contextDictionary.containsKey(contextC)) {
-          contextDictionary[contextC] = contextDictSize++;
-          contextDictionaryToCreate[contextC] = true;
-        }
+  static String? _compress(
+    String? uncompressed,
+    int bitsPerChar,
+    GetCharFromInt getCharFromInt,
+  ) {
+    if (uncompressed == null) return null;
+    int? value;
+    Map<String, int> contextDictionary = Map<String, int>();
+    Map<String, bool> contextDictionaryToCreate = Map<String, bool>();
+    String contextC = "";
+    String contextWC = "";
+    String contextW = "";
+    int contextEnlargeIn =
+        2; // Compensate for the first entry which should not count
+    int contextDictSize = 3;
+    int contextNumBits = 2;
+    StringBuffer contextData = StringBuffer();
+    int contextDataVal = 0;
+    int contextDataPosition = 0;
+    int ii;
 
-        contextWC = contextW + contextC;
-        if (contextDictionary.containsKey(contextWC)) {
-          contextW = contextWC;
-        } else {
-          if (contextDictionaryToCreate.containsKey(contextW)) {
-            if (contextW.codeUnitAt(0) < 256) {
-              for (var i = 0; i < contextNumBits; i++) {
-                contextDataVal = (contextDataVal << 1);
-                if (contextDataPosition == bitsPerChar - 1) {
-                  contextDataPosition = 0;
-                  contextData.write(getCharFromInt(contextDataVal));
-                  contextDataVal = 0;
-                } else {
-                  contextDataPosition++;
-                }
-              }
-              value = contextW.codeUnitAt(0);
-              for (var i = 0; i < 8; i++) {
-                contextDataVal = (contextDataVal << 1) | (value! & 1);
-                if (contextDataPosition == bitsPerChar - 1) {
-                  contextDataPosition = 0;
-                  contextData.write(getCharFromInt(contextDataVal));
-                  contextDataVal = 0;
-                } else {
-                  contextDataPosition++;
-                }
-                value = value >> 1;
-              }
-            } else {
-              value = 1;
-              for (var i = 0; i < contextNumBits; i++) {
-                contextDataVal = (contextDataVal << 1) | value!;
-                if (contextDataPosition == bitsPerChar - 1) {
-                  contextDataPosition = 0;
-                  contextData.write(getCharFromInt(contextDataVal));
-                  contextDataVal = 0;
-                } else {
-                  contextDataPosition++;
-                }
-                value = 0;
-              }
-              value = contextW.codeUnitAt(0);
-              for (var i = 0; i < 16; i++) {
-                contextDataVal = (contextDataVal << 1) | (value! & 1);
-                if (contextDataPosition == bitsPerChar - 1) {
-                  contextDataPosition = 0;
-                  contextData.write(getCharFromInt(contextDataVal));
-                  contextDataVal = 0;
-                } else {
-                  contextDataPosition++;
-                }
-                value = value >> 1;
-              }
-            }
-            contextEnlargeIn--;
-            if (contextEnlargeIn == 0) {
-              contextEnlargeIn = pow(2, contextNumBits).toInt();
-              contextNumBits++;
-            }
-            contextDictionaryToCreate.remove(contextW);
-          } else {
-            value = contextDictionary[contextW];
-            for (var i = 0; i < contextNumBits; i++) {
-              contextDataVal = (contextDataVal << 1) | (value! & 1);
-              if (contextDataPosition == bitsPerChar - 1) {
-                contextDataPosition = 0;
-                contextData.write(getCharFromInt(contextDataVal));
-                contextDataVal = 0;
-              } else {
-                contextDataPosition++;
-              }
-              value = value >> 1;
-            }
-          }
-          contextEnlargeIn--;
-          if (contextEnlargeIn == 0) {
-            contextEnlargeIn = pow(2, contextNumBits).toInt();
-            contextNumBits++;
-          }
-          // Add wc to the dictionary.
-          contextDictionary[contextWC] = contextDictSize++;
-          contextW = contextC;
-        }
+    for (ii = 0; ii < uncompressed.length; ii++) {
+      contextC = uncompressed[ii];
+      if (!contextDictionary.containsKey(contextC)) {
+        contextDictionary[contextC] = contextDictSize++;
+        contextDictionaryToCreate[contextC] = true;
       }
 
-      // Output the code for w.
-      if (contextW != "") {
+      contextWC = contextW + contextC;
+      if (contextDictionary.containsKey(contextWC)) {
+        contextW = contextWC;
+      } else {
         if (contextDictionaryToCreate.containsKey(contextW)) {
           if (contextW.codeUnitAt(0) < 256) {
             for (var i = 0; i < contextNumBits; i++) {
@@ -319,47 +292,132 @@ class LZString {
           contextEnlargeIn = pow(2, contextNumBits).toInt();
           contextNumBits++;
         }
+        // Add wc to the dictionary.
+        contextDictionary[contextWC] = contextDictSize++;
+        contextW = contextC;
       }
+    }
 
-      // Mark the end of the stream
-      value = 2;
-      for (var i = 0; i < contextNumBits; i++) {
-        contextDataVal = (contextDataVal << 1) | (value! & 1);
-        if (contextDataPosition == bitsPerChar - 1) {
-          contextDataPosition = 0;
-          contextData.write(getCharFromInt(contextDataVal));
-          contextDataVal = 0;
+    // Output the code for w.
+    if (contextW != "") {
+      if (contextDictionaryToCreate.containsKey(contextW)) {
+        if (contextW.codeUnitAt(0) < 256) {
+          for (var i = 0; i < contextNumBits; i++) {
+            contextDataVal = (contextDataVal << 1);
+            if (contextDataPosition == bitsPerChar - 1) {
+              contextDataPosition = 0;
+              contextData.write(getCharFromInt(contextDataVal));
+              contextDataVal = 0;
+            } else {
+              contextDataPosition++;
+            }
+          }
+          value = contextW.codeUnitAt(0);
+          for (var i = 0; i < 8; i++) {
+            contextDataVal = (contextDataVal << 1) | (value! & 1);
+            if (contextDataPosition == bitsPerChar - 1) {
+              contextDataPosition = 0;
+              contextData.write(getCharFromInt(contextDataVal));
+              contextDataVal = 0;
+            } else {
+              contextDataPosition++;
+            }
+            value = value >> 1;
+          }
         } else {
-          contextDataPosition++;
+          value = 1;
+          for (var i = 0; i < contextNumBits; i++) {
+            contextDataVal = (contextDataVal << 1) | value!;
+            if (contextDataPosition == bitsPerChar - 1) {
+              contextDataPosition = 0;
+              contextData.write(getCharFromInt(contextDataVal));
+              contextDataVal = 0;
+            } else {
+              contextDataPosition++;
+            }
+            value = 0;
+          }
+          value = contextW.codeUnitAt(0);
+          for (var i = 0; i < 16; i++) {
+            contextDataVal = (contextDataVal << 1) | (value! & 1);
+            if (contextDataPosition == bitsPerChar - 1) {
+              contextDataPosition = 0;
+              contextData.write(getCharFromInt(contextDataVal));
+              contextDataVal = 0;
+            } else {
+              contextDataPosition++;
+            }
+            value = value >> 1;
+          }
         }
-        value = value >> 1;
+        contextEnlargeIn--;
+        if (contextEnlargeIn == 0) {
+          contextEnlargeIn = pow(2, contextNumBits).toInt();
+          contextNumBits++;
+        }
+        contextDictionaryToCreate.remove(contextW);
+      } else {
+        value = contextDictionary[contextW];
+        for (var i = 0; i < contextNumBits; i++) {
+          contextDataVal = (contextDataVal << 1) | (value! & 1);
+          if (contextDataPosition == bitsPerChar - 1) {
+            contextDataPosition = 0;
+            contextData.write(getCharFromInt(contextDataVal));
+            contextDataVal = 0;
+          } else {
+            contextDataPosition++;
+          }
+          value = value >> 1;
+        }
       }
+      contextEnlargeIn--;
+      if (contextEnlargeIn == 0) {
+        contextEnlargeIn = pow(2, contextNumBits).toInt();
+        contextNumBits++;
+      }
+    }
 
-      // Flush the last char
-      while (true) {
-        contextDataVal = (contextDataVal << 1);
-        if (contextDataPosition == bitsPerChar - 1) {
-          contextData.write(getCharFromInt(contextDataVal));
-          break;
-        } else {
-          contextDataPosition++;
-        }
+    // Mark the end of the stream
+    value = 2;
+    for (var i = 0; i < contextNumBits; i++) {
+      contextDataVal = (contextDataVal << 1) | (value! & 1);
+      if (contextDataPosition == bitsPerChar - 1) {
+        contextDataPosition = 0;
+        contextData.write(getCharFromInt(contextDataVal));
+        contextDataVal = 0;
+      } else {
+        contextDataPosition++;
       }
-      return contextData.toString();
-    });
+      value = value >> 1;
+    }
+
+    // Flush the last char
+    while (true) {
+      contextDataVal = (contextDataVal << 1);
+      if (contextDataPosition == bitsPerChar - 1) {
+        contextData.write(getCharFromInt(contextDataVal));
+        break;
+      } else {
+        contextDataPosition++;
+      }
+    }
+    return contextData.toString();
   }
 
-  /// Decompress invalid UTF-16 strings which produces by `compress`.
-  static Future<String?> decompress(final String? compressed) async {
-    if (compressed == null) return "";
-    if (compressed.isEmpty) return null;
-    return await _decompress(
-        compressed.length, 32768, (index) => compressed.codeUnitAt(index));
+  /// Decompress invalid UTF-16 strings produced by `compress`.
+  static Future<String?> decompress(final String? compressed) async =>
+      decompressSync(compressed);
+
+  /// Synchronously decompress invalid UTF-16 strings produced by `compress`.
+  static String? decompressSync(final String? compressed) {
+    if (compressed?.isEmpty ?? true) return null;
+    return _decompress(
+        compressed!.length, 32768, (index) => compressed.codeUnitAt(index));
   }
 
-  static Future<String?> _decompress(
-      int length, int resetValue, GetNextValue getNextValue) async {
-    Map<int, String> dictionary = <int, String>{};
+  static String? _decompress(
+      int length, int resetValue, GetNextValue getNextValue) {
+    final dictionary = <int, String>{};
     int enLargeIn = 4,
         dictSize = 4,
         numBits = 3,
@@ -369,8 +427,8 @@ class LZString {
         power,
         resb;
     String? entry = "", c, w;
-    StringBuffer result = StringBuffer();
-    _Data data = _Data(getNextValue(0), resetValue, 1);
+    final result = StringBuffer();
+    final data = _Data(getNextValue(0), resetValue, 1);
 
     for (i = 0; i < 3; i++) {
       dictionary[i] = i.toString();
