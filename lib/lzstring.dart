@@ -60,7 +60,7 @@ class LZString {
     return null;
   }
 
-  /// Decompress base64 [input] which produces by `compressToBase64`.
+  /// Decompress base64 [input] which produces by [compressToBase64].
   static Future<String?> decompressFromBase64(String? input) async =>
       decompressFromBase64Sync(input);
 
@@ -83,7 +83,7 @@ class LZString {
 
   /// Synchronously produces "valid" UTF-16 strings from [input].
   ///
-  /// Can be decompressed with `decompressFromUTF16`.
+  /// Can be decompressed with [decompressFromUTF16].
   ///
   /// This works by using only 15 bits of storage per character. The strings
   //// produced are therefore 6.66% bigger than those produced by [compress].
@@ -98,7 +98,7 @@ class LZString {
       decompressFromUTF16Sync(compressed);
 
   /// Synchronously decompress "valid" UTF-16 string which produces by
-  /// [compressToUTF16]
+  /// [compressToUTF16].
   static String? decompressFromUTF16Sync(String? compressed) {
     if (compressed?.isEmpty ?? true) return null;
     return _decompress(compressed!.length, 16384,
@@ -167,21 +167,19 @@ class LZString {
   /// Synchronously produces ASCII strings representing the original string
   /// encoded in Base64 with a few tweaks to make these URI safe.
   ///
-  /// Can be decompressed with `decompressFromEncodedURIComponent`
+  /// Can be decompressed with [decompressFromEncodedURIComponent].
   static String? compressToEncodedURIComponentSync(String? input) =>
       _compress(input, 6, (a) => _keyStrUriSafe[a]);
 
   /// Produces invalid UTF-16 strings from [uncompressed].
   ///
-  /// Can be decompressed with `decompress`.
-  ///
+  /// Can be decompressed with [decompress].
   static Future<String?> compress(final String? uncompressed) async =>
       compressSync(uncompressed);
 
   /// Synchronously produces invalid UTF-16 strings from [uncompressed].
   ///
-  /// Can be decompressed with `decompress`.
-  ///
+  /// Can be decompressed with [decompress].
   static String? compressSync(final String? uncompressed) =>
       _compress(uncompressed, 16, (a) => String.fromCharCode(a));
 
@@ -198,7 +196,7 @@ class LZString {
     String contextWC = "";
     String contextW = "";
     int contextEnlargeIn =
-        2; // Compensate for the first entry which should not count
+        2; // Compensate for the first entry which should not count.
     int contextDictSize = 3;
     int contextNumBits = 2;
     StringBuffer contextData = StringBuffer();
@@ -377,7 +375,7 @@ class LZString {
       }
     }
 
-    // Mark the end of the stream
+    // Mark the end of the stream.
     value = 2;
     for (var i = 0; i < contextNumBits; i++) {
       contextDataVal = (contextDataVal << 1) | (value! & 1);
@@ -391,7 +389,7 @@ class LZString {
       value = value >> 1;
     }
 
-    // Flush the last char
+    // Flush the last char.
     while (true) {
       contextDataVal = (contextDataVal << 1);
       if (contextDataPosition == bitsPerChar - 1) {
@@ -404,11 +402,11 @@ class LZString {
     return contextData.toString();
   }
 
-  /// Decompress invalid UTF-16 strings produced by `compress`.
+  /// Decompress invalid UTF-16 strings produced by [compress].
   static Future<String?> decompress(final String? compressed) async =>
       decompressSync(compressed);
 
-  /// Synchronously decompress invalid UTF-16 strings produced by `compress`.
+  /// Synchronously decompress invalid UTF-16 strings produced by [compress].
   static String? decompressSync(final String? compressed) {
     if (compressed?.isEmpty ?? true) return null;
     return _decompress(
